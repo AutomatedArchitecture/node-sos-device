@@ -1,0 +1,22 @@
+{
+  "name": "sos-device",
+  "version": "0.0.1",
+  "description": "Siren of Shame driver.",
+  "main": "sos.js",
+  "repository": "",
+  "keywords": [
+    "sos",
+    "siren",
+    "shame"
+  ],
+  "author": "Joe Ferner <joe@fernsroth.com>",
+  "license": "MIT",
+  "dependencies": {
+  },
+  "devDependencies": {
+    "nodeunit": "~0.7.4"
+  },
+  "scripts": {
+    "test": "./node_modules/.bin/nodeunit test"
+  }
+}
