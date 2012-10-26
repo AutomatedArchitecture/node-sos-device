@@ -2,12 +2,40 @@
 #include "nodeSos.h"
 #include "usbPackets.h"
 
+#ifdef WIN32
+  HidD_GetInputReportFn HidD_GetInputReport = NULL;
+  HidD_SetOutputReportFn HidD_SetOutputReport = NULL;
+  HidD_GetHidGuidFn HidD_GetHidGuid = NULL;
+  SetupDiGetClassDevsFn sosSetupDiGetClassDevs = NULL;
+  SetupDiDestroyDeviceInfoListFn sosSetupDiDestroyDeviceInfoList = NULL;
+  SetupDiEnumDeviceInterfacesFn sosSetupDiEnumDeviceInterfaces = NULL;
+  SetupDiGetDeviceInterfaceDetailFn sosSetupDiGetDeviceInterfaceDetail = NULL;
+
+  void initFunctionPointers() {
+    if(HidD_GetInputReport == NULL) {
+      HMODULE hid = LoadLibrary("hid.dll");
+      HidD_GetInputReport = (HidD_GetInputReportFn)GetProcAddress(hid, "HidD_GetInputReport");
+      HidD_SetOutputReport = (HidD_SetOutputReportFn)GetProcAddress(hid, "HidD_SetOutputReport");
+      HidD_GetHidGuid = (HidD_GetHidGuidFn)GetProcAddress(hid, "HidD_GetHidGuid");
+
+      HMODULE setupapi = LoadLibrary("setupapi.dll");
+      sosSetupDiGetClassDevs = (SetupDiGetClassDevsFn)GetProcAddress(setupapi, "SetupDiGetClassDevsA");
+      sosSetupDiDestroyDeviceInfoList = (SetupDiDestroyDeviceInfoListFn)GetProcAddress(setupapi, "SetupDiDestroyDeviceInfoList");
+      sosSetupDiEnumDeviceInterfaces = (SetupDiEnumDeviceInterfacesFn)GetProcAddress(setupapi, "SetupDiEnumDeviceInterfaces");
+      sosSetupDiGetDeviceInterfaceDetail = (SetupDiGetDeviceInterfaceDetailFn)GetProcAddress(setupapi, "SetupDiGetDeviceInterfaceDetailA");
+    }
+  }
+#endif
+
 int sosVendorId = 5840;
 int sosProductId = 1606;
+int sosPacketSize = 1 + 37; // report id + packet length
 
+#ifndef WIN32
 // Values for bmRequestType in the Setup transaction's Data packet.
 static const int CONTROL_REQUEST_TYPE_IN = USB_ENDPOINT_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE;
 static const int CONTROL_REQUEST_TYPE_OUT = USB_ENDPOINT_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE;
+#endif
 
 // From the HID spec:
 static const int HID_REPORT_GET = 0x01;
@@ -49,60 +77,78 @@ void initControlPacket(UsbControlPacket *packet) {
 
 void SosDevice::getInputReport(int reportId, char* buf, int bufSize) {
   char errorBuffer[1000];
-  int claimResult = usb_claim_interface(devHandle, INTERFACE_NUMBER);
-  if(claimResult != 0) {
-    sprintf(errorBuffer, "usb_claim_interface: %d %s\n", claimResult, usb_strerror());
-    throw NodeSosException(errorBuffer);
-  }
 
-  int bytesSent = usb_control_msg(
-    devHandle,
-    CONTROL_REQUEST_TYPE_IN,
-    HID_REPORT_GET,
-    (HID_REPORT_TYPE_INPUT << 8) | reportId,
-    INTERFACE_NUMBER,
-    buf,
-    bufSize,
-    10000);
-  if(bytesSent < 0) {
-    sprintf(errorBuffer, "usb_control_msg: %d %s\n", bytesSent, usb_strerror());
-    throw NodeSosException(errorBuffer);
-  }
+  #ifdef WIN32
+    buf[0] = reportId;
+    if(!HidD_GetInputReport(devHandle, buf, sosPacketSize)) {
+      sprintf(errorBuffer, "Could not get input report: 0x%08X", GetLastError());
+      throw NodeSosException(errorBuffer);
+    }
+  #else
+    int claimResult = usb_claim_interface(devHandle, INTERFACE_NUMBER);
+    if(claimResult != 0) {
+      sprintf(errorBuffer, "usb_claim_interface: %d %s\n", claimResult, usb_strerror());
+      throw NodeSosException(errorBuffer);
+    }
 
-  int releaseResult = usb_release_interface(devHandle, INTERFACE_NUMBER);
-  if(releaseResult != 0) {
-    sprintf(errorBuffer, "usb_release_interface: %d %s\n", releaseResult, usb_strerror());
-    throw NodeSosException(errorBuffer);
-  }
+    int bytesSent = usb_control_msg(
+      devHandle,
+      CONTROL_REQUEST_TYPE_IN,
+      HID_REPORT_GET,
+      (HID_REPORT_TYPE_INPUT << 8) | reportId,
+      INTERFACE_NUMBER,
+      buf,
+      bufSize,
+      10000);
+    if(bytesSent < 0) {
+      sprintf(errorBuffer, "usb_control_msg: %d %s\n", bytesSent, usb_strerror());
+      throw NodeSosException(errorBuffer);
+    }
+
+    int releaseResult = usb_release_interface(devHandle, INTERFACE_NUMBER);
+    if(releaseResult != 0) {
+      sprintf(errorBuffer, "usb_release_interface: %d %s\n", releaseResult, usb_strerror());
+      throw NodeSosException(errorBuffer);
+    }
+  #endif
 }
 
 void SosDevice::setOutputReport(int reportId, char* buf, int bufSize) {
   char errorBuffer[1000];
-  int claimResult = usb_claim_interface(devHandle, INTERFACE_NUMBER);
-  if(claimResult != 0) {
-    sprintf(errorBuffer, "usb_claim_interface: %d %s\n", claimResult, usb_strerror());
-    throw NodeSosException(errorBuffer);
-  }
 
-  int bytesSent = usb_control_msg(
-    devHandle,
-    CONTROL_REQUEST_TYPE_OUT,
-    HID_REPORT_SET,
-    (HID_REPORT_TYPE_INPUT << 8) | reportId,
-    INTERFACE_NUMBER,
-    buf,
-    bufSize,
-    10000);
-  if(bytesSent < 0) {
-    sprintf(errorBuffer, "usb_control_msg: %d %s\n", bytesSent, usb_strerror());
-    throw NodeSosException(errorBuffer);
-  }
+  #ifdef WIN32
+    buf[0] = reportId;
+    if(!HidD_SetOutputReport(devHandle, buf, sosPacketSize)) {
+      sprintf(errorBuffer, "Could not set output report: 0x%08X", GetLastError());
+      throw NodeSosException(errorBuffer);
+    }
+  #else
+    int claimResult = usb_claim_interface(devHandle, INTERFACE_NUMBER);
+    if(claimResult != 0) {
+      sprintf(errorBuffer, "usb_claim_interface: %d %s\n", claimResult, usb_strerror());
+      throw NodeSosException(errorBuffer);
+    }
 
-  int releaseResult = usb_release_interface(devHandle, INTERFACE_NUMBER);
-  if(releaseResult != 0) {
-    sprintf(errorBuffer, "usb_release_interface: %d %s\n", releaseResult, usb_strerror());
-    throw NodeSosException(errorBuffer);
-  }
+    int bytesSent = usb_control_msg(
+      devHandle,
+      CONTROL_REQUEST_TYPE_OUT,
+      HID_REPORT_SET,
+      (HID_REPORT_TYPE_INPUT << 8) | reportId,
+      INTERFACE_NUMBER,
+      buf,
+      bufSize,
+      10000);
+    if(bytesSent < 0) {
+      sprintf(errorBuffer, "usb_control_msg: %d %s\n", bytesSent, usb_strerror());
+      throw NodeSosException(errorBuffer);
+    }
+
+    int releaseResult = usb_release_interface(devHandle, INTERFACE_NUMBER);
+    if(releaseResult != 0) {
+      sprintf(errorBuffer, "usb_release_interface: %d %s\n", releaseResult, usb_strerror());
+      throw NodeSosException(errorBuffer);
+    }
+  #endif
 }
 
 /*static*/ v8::Handle<v8::Value> SosDevice::readInfo(const v8::Arguments& args) {
@@ -288,79 +334,185 @@ v8::Persistent<v8::FunctionTemplate> SosDevice::s_ct;
   target->Set(v8::String::NewSymbol("SosDevice"), s_ct->GetFunction());
 }
 
-/*static*/ v8::Local<v8::Object> SosDevice::New(struct usb_device *dev, struct usb_dev_handle *devHandle) {
-  v8::HandleScope scope;
+#ifdef WIN32
+  /*static*/ v8::Local<v8::Object> SosDevice::New(HANDLE devHandle) {
+    v8::HandleScope scope;
 
-  v8::Local<v8::Function> ctor = s_ct->GetFunction();
-  v8::Local<v8::Object> obj = ctor->NewInstance();
-  SosDevice *self = new SosDevice(dev, devHandle);
-  self->Wrap(obj);
+    initFunctionPointers();
 
-  return scope.Close(obj);
-}
+    v8::Local<v8::Function> ctor = s_ct->GetFunction();
+    v8::Local<v8::Object> obj = ctor->NewInstance();
+    SosDevice *self = new SosDevice(devHandle);
+    self->Wrap(obj);
 
-SosDevice::SosDevice(struct usb_device *dev, struct usb_dev_handle *devHandle) {
-  this->dev = dev;
-  this->devHandle = devHandle;
-}
+    return scope.Close(obj);
+  }
 
-static struct usb_device *findSos() {
-  struct usb_bus *bus;
-  struct usb_device *dev;
-  struct usb_bus *busses;
+  SosDevice::SosDevice(HANDLE devHandle) {
+    initFunctionPointers();
+    this->devHandle = devHandle;
+  }
+#else
+  /*static*/ v8::Local<v8::Object> SosDevice::New(struct usb_device *dev, struct usb_dev_handle *devHandle) {
+    v8::HandleScope scope;
 
-  usb_init();
-  usb_find_busses();
-  usb_find_devices();
+    v8::Local<v8::Function> ctor = s_ct->GetFunction();
+    v8::Local<v8::Object> obj = ctor->NewInstance();
+    SosDevice *self = new SosDevice(dev, devHandle);
+    self->Wrap(obj);
 
-  busses = usb_get_busses();
+    return scope.Close(obj);
+  }
 
-  for (bus = busses; bus; bus = bus->next){
-    for (dev = bus->devices; dev; dev = dev->next) {
-      if ((dev->descriptor.idVendor == sosVendorId) && (dev->descriptor.idProduct == sosProductId)) {
-        return dev;
+  SosDevice::SosDevice(struct usb_device *dev, struct usb_dev_handle *devHandle) {
+    this->dev = dev;
+    this->devHandle = devHandle;
+  }
+#endif
+
+#ifdef WIN32
+  HANDLE findSos() {
+    GUID hidGuid;
+    HANDLE devHandle = NULL;
+    char sosVendorIdStr[10];
+    char sosProductIdStr[10];
+
+    sprintf(sosVendorIdStr, "%x", sosVendorId);
+    sprintf(sosProductIdStr, "%x", sosProductId);
+
+    HidD_GetHidGuid(&hidGuid);
+
+    HANDLE deviceInfoSet = sosSetupDiGetClassDevs(&hidGuid, NULL, NULL, DIGCF_PRESENT | DIGCF_DEVICEINTERFACE);
+    if(deviceInfoSet == INVALID_HANDLE_VALUE) {
+      return INVALID_HANDLE_VALUE;
+    }
+
+    SP_DEVICE_INTERFACE_DATA deviceInterfaceData;
+    SP_DEVICE_INTERFACE_DETAIL_DATA *deviceInterfaceDetailData = (SP_DEVICE_INTERFACE_DETAIL_DATA*)malloc(sizeof(SP_DEVICE_INTERFACE_DETAIL_DATA) + 1000);
+    for(int i=0; ; i++) {
+      deviceInterfaceData.cbSize = sizeof(SP_DEVICE_INTERFACE_DATA);
+      if(!sosSetupDiEnumDeviceInterfaces(deviceInfoSet, NULL, &hidGuid, i, &deviceInterfaceData)) {
+        goto deviceNotFound;
+      }
+      DWORD requiredSize;
+
+      deviceInterfaceDetailData->cbSize = 8;
+
+      SP_DEVINFO_DATA deviceInfoData;
+      deviceInfoData.cbSize = sizeof(SP_DEVINFO_DATA);
+
+      sosSetupDiGetDeviceInterfaceDetail(
+        deviceInfoSet,
+        &deviceInterfaceData,
+        deviceInterfaceDetailData,
+        1000,
+        &requiredSize,
+        &deviceInfoData);
+
+      if(strstr(deviceInterfaceDetailData->DevicePath, sosVendorIdStr)
+        && strstr(deviceInterfaceDetailData->DevicePath, sosProductIdStr)) {
+        break;
       }
     }
+
+    devHandle = CreateFile(
+      deviceInterfaceDetailData->DevicePath,
+      GENERIC_READ | GENERIC_WRITE,
+      FILE_SHARE_READ | FILE_SHARE_WRITE,
+      NULL,
+      OPEN_EXISTING,
+      FILE_FLAG_OVERLAPPED,
+      NULL);
+
+deviceNotFound:
+    free(deviceInterfaceDetailData);
+    sosSetupDiDestroyDeviceInfoList(deviceInfoSet);
+
+    return devHandle;
   }
-  return NULL;
-}
 
-v8::Handle<v8::Value> findDevice(const v8::Arguments& args) {
-  char errorBuffer[1000];
-  v8::HandleScope scope;
-  v8::Handle<v8::Value> callbackArgs[2];
+  v8::Handle<v8::Value> findDevice(const v8::Arguments& args) {
+    char errorBuffer[1000];
+    v8::HandleScope scope;
+    v8::Handle<v8::Value> callbackArgs[2];
 
-  v8::Function *callback = v8::Function::Cast(*args[0]);
+    initFunctionPointers();
 
-  struct usb_device *dev = findSos();
-  if(dev == NULL) {
-    callbackArgs[0] = v8::Exception::Error(v8::String::New("No Siren of Shame devices found"));
-    callbackArgs[1] = v8::Undefined();
+    v8::Function *callback = v8::Function::Cast(*args[0]);
+
+    HANDLE devHandle = findSos();
+    if(devHandle == NULL || devHandle == INVALID_HANDLE_VALUE) {
+      callbackArgs[0] = v8::Exception::Error(v8::String::New("No Siren of Shame devices found"));
+      callbackArgs[1] = v8::Undefined();
+      callback->Call(v8::Context::GetCurrent()->Global(), 2, callbackArgs);
+      return scope.Close(v8::Undefined());
+    }
+
+    v8::Local<v8::Object> sosDevice = SosDevice::New(devHandle);
+    callbackArgs[0] = v8::Undefined();
+    callbackArgs[1] = sosDevice;
     callback->Call(v8::Context::GetCurrent()->Global(), 2, callbackArgs);
     return scope.Close(v8::Undefined());
   }
+#else
+  static struct usb_device *findSos() {
+    struct usb_bus *bus;
+    struct usb_device *dev;
+    struct usb_bus *busses;
 
-  usb_dev_handle *devHandle = usb_open(dev);
-  if(devHandle == NULL) {
-    callbackArgs[0] = v8::Exception::Error(v8::String::New("Could not open Siren of Shame"));
-    callbackArgs[1] = v8::Undefined();
+    usb_init();
+    usb_find_busses();
+    usb_find_devices();
+
+    busses = usb_get_busses();
+
+    for (bus = busses; bus; bus = bus->next){
+      for (dev = bus->devices; dev; dev = dev->next) {
+        if ((dev->descriptor.idVendor == sosVendorId) && (dev->descriptor.idProduct == sosProductId)) {
+          return dev;
+        }
+      }
+    }
+    return NULL;
+  }
+
+  v8::Handle<v8::Value> findDevice(const v8::Arguments& args) {
+    char errorBuffer[1000];
+    v8::HandleScope scope;
+    v8::Handle<v8::Value> callbackArgs[2];
+
+    v8::Function *callback = v8::Function::Cast(*args[0]);
+
+    struct usb_device *dev = findSos();
+    if(dev == NULL) {
+      callbackArgs[0] = v8::Exception::Error(v8::String::New("No Siren of Shame devices found"));
+      callbackArgs[1] = v8::Undefined();
+      callback->Call(v8::Context::GetCurrent()->Global(), 2, callbackArgs);
+      return scope.Close(v8::Undefined());
+    }
+
+    usb_dev_handle *devHandle = usb_open(dev);
+    if(devHandle == NULL) {
+      callbackArgs[0] = v8::Exception::Error(v8::String::New("Could not open Siren of Shame"));
+      callbackArgs[1] = v8::Undefined();
+      callback->Call(v8::Context::GetCurrent()->Global(), 2, callbackArgs);
+      return scope.Close(v8::Undefined());
+    }
+
+    int detachResult = usb_detach_kernel_driver_np(devHandle, INTERFACE_NUMBER);
+    if(detachResult != 0 && detachResult != -61) {
+      sprintf(errorBuffer, "usb_detach_kernel_driver_np: %d %s\n", detachResult, usb_strerror());
+      callbackArgs[0] = v8::Exception::Error(v8::String::New(errorBuffer));
+      callbackArgs[1] = v8::Undefined();
+      callback->Call(v8::Context::GetCurrent()->Global(), 2, callbackArgs);
+      return scope.Close(v8::Undefined());
+    }
+
+    v8::Local<v8::Object> sosDevice = SosDevice::New(dev, devHandle);
+    callbackArgs[0] = v8::Undefined();
+    callbackArgs[1] = sosDevice;
     callback->Call(v8::Context::GetCurrent()->Global(), 2, callbackArgs);
     return scope.Close(v8::Undefined());
   }
-
-  int detachResult = usb_detach_kernel_driver_np(devHandle, INTERFACE_NUMBER);
-  if(detachResult != 0 && detachResult != -61) {
-    sprintf(errorBuffer, "usb_detach_kernel_driver_np: %d %s\n", detachResult, usb_strerror());
-    callbackArgs[0] = v8::Exception::Error(v8::String::New(errorBuffer));
-    callbackArgs[1] = v8::Undefined();
-    callback->Call(v8::Context::GetCurrent()->Global(), 2, callbackArgs);
-    return scope.Close(v8::Undefined());
-  }
-
-  v8::Local<v8::Object> sosDevice = SosDevice::New(dev, devHandle);
-  callbackArgs[0] = v8::Undefined();
-  callbackArgs[1] = sosDevice;
-  callback->Call(v8::Context::GetCurrent()->Global(), 2, callbackArgs);
-  return scope.Close(v8::Undefined());
-}
+#endif
 
