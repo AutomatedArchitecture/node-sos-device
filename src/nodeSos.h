@@ -9,6 +9,7 @@
 #endif
 #include <stdio.h>
 #include <node.h>
+#include <string.h>
 
 v8::Handle<v8::Value> findDevice(const v8::Arguments& args);
 
