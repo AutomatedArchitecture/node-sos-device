@@ -1,9 +1,9 @@
 {
   "name": "sos-device",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Siren of Shame driver.",
   "main": "sos.js",
-  "repository": "",
+  "repository": "https://github.com/AutomatedArchitecture/node-sos-device",
   "keywords": [
     "sos",
     "siren",
