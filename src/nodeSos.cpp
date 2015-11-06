@@ -335,16 +335,16 @@ Nan::Persistent<v8::FunctionTemplate> SosDevice::s_ct;
 
 #ifdef WIN32
   /*static*/ v8::Local<v8::Object> SosDevice::New(HANDLE devHandle) {
-    Nan::HandleScope scope;
+    Nan::EscapableHandleScope scope;
 
     initFunctionPointers();
 
-    v8::Local<v8::Function> ctor = s_ct->GetFunction();
+    v8::Local<v8::Function> ctor = Nan::New(s_ct)->GetFunction();
     v8::Local<v8::Object> obj = ctor->NewInstance();
     SosDevice *self = new SosDevice(devHandle);
     self->Wrap(obj);
 
-    return scope.Close(obj);
+    return scope.Escape(obj);
   }
 
   SosDevice::SosDevice(HANDLE devHandle) {
