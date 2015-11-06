@@ -12,6 +12,7 @@
   "author": "Joe Ferner <joe@fernsroth.com>",
   "license": "MIT",
   "dependencies": {
+    "nan": "^2.1.0"
   },
   "devDependencies": {
     "nodeunit": "~0.7.4"

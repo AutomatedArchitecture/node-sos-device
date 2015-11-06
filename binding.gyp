@@ -6,6 +6,9 @@
         "src/binding.cpp",
         "src/nodeSos.cpp"
       ],
+      'include_dirs': [
+        "<!(node -e \"require('nan')\")",
+      ],
       "cflags": ['-fexceptions'],
       "cflags_cc": ['-fexceptions'],
       "conditions" : [
