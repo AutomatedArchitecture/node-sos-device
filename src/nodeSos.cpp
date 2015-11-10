@@ -153,7 +153,7 @@ void SosDevice::setOutputReport(int reportId, char* buf, int bufSize) {
 
 NAN_METHOD(SosDevice::readInfo) {
   Nan::HandleScope scope;
-  v8::Handle<v8::Value> callbackArgs[2];
+  v8::Local<v8::Value> callbackArgs[2];
   SosDevice* sosDevice = Nan::ObjectWrap::Unwrap<SosDevice>(info.This());
 
   Nan::Callback *callback = new Nan::Callback(info[0].As<v8::Function>());
@@ -185,7 +185,7 @@ NAN_METHOD(SosDevice::readInfo) {
 
 NAN_METHOD(SosDevice::readLedPatterns) {
   Nan::HandleScope scope;
-  v8::Handle<v8::Value> callbackArgs[2];
+  v8::Local<v8::Value> callbackArgs[2];
   SosDevice* sosDevice = Nan::ObjectWrap::Unwrap<SosDevice>(info.This());
 
   Nan::Callback *callback = new Nan::Callback(info[0].As<v8::Function>());
@@ -223,7 +223,7 @@ NAN_METHOD(SosDevice::readLedPatterns) {
 
 NAN_METHOD(SosDevice::readAudioPatterns) {
   Nan::HandleScope scope;
-  v8::Handle<v8::Value> callbackArgs[2];
+  v8::Local<v8::Value> callbackArgs[2];
   SosDevice* sosDevice = Nan::ObjectWrap::Unwrap<SosDevice>(info.This());
 
   Nan::Callback *callback = new Nan::Callback(info[0].As<v8::Function>());
@@ -261,7 +261,7 @@ NAN_METHOD(SosDevice::readAudioPatterns) {
 
 NAN_METHOD(SosDevice::sendControlPacket) {
   Nan::HandleScope scope;
-  v8::Handle<v8::Value> callbackArgs[2];
+  v8::Local<v8::Value> callbackArgs[2];
   SosDevice* sosDevice = Nan::ObjectWrap::Unwrap<SosDevice>(info.This());
 
   v8::Local<v8::Object> values = info[0].As<v8::Object>();
@@ -433,7 +433,7 @@ deviceNotFound:
   NAN_METHOD(findDevice) {
     char errorBuffer[1000];
     Nan::HandleScope scope;
-    v8::Handle<v8::Value> callbackArgs[2];
+    v8::Local<v8::Value> callbackArgs[2];
 
     initFunctionPointers();
 
@@ -441,7 +441,7 @@ deviceNotFound:
 
     HANDLE devHandle = findSos();
     if(devHandle == NULL || devHandle == INVALID_HANDLE_VALUE) {
-      callbackArgs[0] = v8::Exception::Error(Nan::New<v8::String>("No Siren of Shame devices found"));
+      callbackArgs[0] = Nan::New<v8::String>("No Siren of Shame devices found").ToLocalChecked();
       callbackArgs[1] = Nan::Undefined();
       callback->Call(2, callbackArgs);
       return;
