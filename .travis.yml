@@ -1,6 +1,17 @@
 language: node_js
-before_install:
-  - sudo apt-get install -qq libusb-dev
+compiler: gcc
+sudo: false
+addons:
+  apt:
+    sources:
+      - ubuntu-toolchain-r-test
+    packages:
+      - libusb-dev
+      - g++-4.8
 node_js:
   - "4.1"
   - "0.12"
+install:
+  - export CXX=g++-4.8
+  - $CXX --version
+  - npm install
