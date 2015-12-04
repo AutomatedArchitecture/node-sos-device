@@ -1,4 +1,6 @@
 language: node_js
+before_install:
+  - sudo apt-get install -qq libusb-dev
 node_js:
   - "4.1"
   - "0.12"
