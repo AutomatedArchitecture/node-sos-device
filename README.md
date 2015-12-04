@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/AutomatedArchitecture/node-sos-device.svg)](https://travis-ci.org/AutomatedArchitecture/node-sos-device)
+[![Build Status](https://travis-ci.org/AutomatedArchitecture/node-sos-device.svg?branch=master)](https://travis-ci.org/AutomatedArchitecture/node-sos-device)
 
 # node-sos
 
