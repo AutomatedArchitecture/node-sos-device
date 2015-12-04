@@ -1,4 +1,5 @@
 [![Build Status](https://travis-ci.org/AutomatedArchitecture/node-sos-device.svg?branch=master)](https://travis-ci.org/AutomatedArchitecture/node-sos-device)
+[![npm version](https://badge.fury.io/js/sos-device.svg)](https://badge.fury.io/js/sos-device)
 
 # node-sos
 
