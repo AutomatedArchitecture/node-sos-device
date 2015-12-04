@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/AutomatedArchitecture/node-sos-device.svg)](https://travis-ci.org/AutomatedArchitecture/node-sos-device)
+
 # node-sos
 
 Node.js driver for a [Siren of Shame](http://sirenofshame.com/) device.
