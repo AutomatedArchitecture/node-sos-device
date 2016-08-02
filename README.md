@@ -77,15 +77,15 @@ Sends a control packet (ie controls the SoS device).
 __Arguments__
 
  * packet - The packet to send. All the items below are optional.
- ** ledMode - An id from the list of LED patterns, 0 for off, or 1 for manual control.
- ** ledPlayDuration - The duration to play the LED pattern in milliseconds.
- ** audioMode - An id from the list of audio patterns, 0 for off, or 1 for manual control.
- ** audioPlayDuration - The duration to play the audio pattern in milliseconds.
- ** manualLeds0 - Control LED 0. 1 or 0.
- ** manualLeds1 - Control LED 1. 1 or 0.
- ** manualLeds2 - Control LED 2. 1 or 0.
- ** manualLeds3 - Control LED 3. 1 or 0.
- ** manualLeds4 - Control LED 4. 1 or 0.
+  * ledMode - An id from the list of LED patterns, 0 for off, or 1 for manual control.
+  * ledPlayDuration - The duration to play the LED pattern in milliseconds.
+  * audioMode - An id from the list of audio patterns, 0 for off, or 1 for manual control.
+  * audioPlayDuration - The duration to play the audio pattern in milliseconds.
+  * manualLeds0 - Control LED 0. 1 or 0.
+  * manualLeds1 - Control LED 1. 1 or 0.
+  * manualLeds2 - Control LED 2. 1 or 0.
+  * manualLeds3 - Control LED 3. 1 or 0.
+  * manualLeds4 - Control LED 4. 1 or 0.
  * callback(err) - Called once the control packet has been sent.
 
 ## License
